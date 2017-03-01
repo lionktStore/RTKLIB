@@ -63,6 +63,18 @@ static const int solq_nmea[]={  /* nmea quality flags to rtklib sol quality */
     SOLQ_NONE ,SOLQ_SINGLE, SOLQ_DGPS, SOLQ_PPP , SOLQ_FIX,
     SOLQ_FLOAT,SOLQ_DR    , SOLQ_NONE, SOLQ_NONE, SOLQ_NONE
 };
+
+//crown added fpd field
+static const int solq_nmea_gpfpd[]={    /* nmea gpfpd quality flag to rtklib sol quality */
+
+    /* 0=invalid, 1=roughDUIZHUN, 2=preciseDUIZHUN, 3=gps single */
+    /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
+    /* 9=zero-speed calib, A=VG */
+    0,1,2,3,4,5,6,7,8,9,10
+}
+
+
+
 /* solution option to field separator ----------------------------------------*/
 static const char *opt2sep(const solopt_t *opt)
 {
@@ -229,6 +241,74 @@ static int decode_nmeagga(char **val, int n, sol_t *sol)
     
     return 1;
 }
+
+/* decode nmea gpgga: fix information ----------------------------------------*/
+static int decode_nmeafpd(char **val, int n, sol_t *sol)
+{
+    gtime_t time;
+    int week=0,nsv1=0,nsv2=0,status=0;
+    double tod=0.0,heading=0.0,pitch=0.0,roll=0.0,lat=0.0,lon=0.0,alt=0.0,ep[6],tt;
+    double head_dc=0.0,airpeed=0.0,ve=0.0,vn=0.0,vu=0.0,baseline=0.0;
+    
+    double pos[3]={0};
+    char ns='N',ew='E',ua=' ',um=' ';
+    int i,solq=0,nrcv=0;
+    
+    trace(4,"decode_nmeafpd: n=%d\n",n);
+    
+    for (i=0;i<n;i++) {
+        switch (i) {
+            case 0:week =atoi(val[i]); break; /* GPS week in utc (wwww)*/
+            case 1:tod  =atof(val[i]); break; /* time in utc (hhmmss) */
+            case 2:heading = atof(val[i]); break;   /* heading (hhh.hh)*/
+            case 3:ptich = atof(val[i]); break;   /* pitch (pp.pp)*/
+            case 4:roll = atof(val[i]); break;   /* roll (rrr.rr)*/
+            case 5:lat =  atof(val[i]); break;   /* latitude (ll.lllllll) */
+            case 6:lon =  atof(val[i]); break;   /* lontitude (ll.lllllll) */
+            case 7:alt =  atof(val[i]); break;   /* altitude (aaaaa.aa)*/
+            case 8:head_dc = atof(val[i]); break;   /* head dc (hh.hh) */
+            case 9:airpeed = atof(val[i]); break;   /* airpeed(aaa.aaa) */
+            case 10:ve = atof(val[i]); break;   /* east speed (eee.eee) */            
+            case 11:vn = atof(val[i]); break;   /* north speed (nnn.nnn) */            
+            case 12:vu = atof(val[i]); break;   /* up speed (uuu.uuu) */            
+            case 13:baseline = atof(val[i]); break;   /* baseline length (bb.bbb) */            
+            case 14:nsv1 = atoi(val[i]); break;   /* number of satellites detected on antenna 1 */            
+            case 15:nsv2 = atoi(val[i]); break;   /* number of satellites detected on antenna 2 */            
+            case 16:status = atoi(val[i][1]); break; /* system solution status, only extract the 2rd char*/
+        }
+
+    }
+    sol->time = tod;
+
+    pos[0] = lat;   //lat is rad format ?
+    pos[1] = lon;   //lon is rad format ?
+    pos[2] = alt;   //wgs84 format ?
+
+    time2epoch(sol->time,ep);
+    septime(tod,ep+3,ep+4,ep+5);
+    time=utc2gpst(epoch2time(ep));
+    tt=timediff(time,sol->time);
+    if      (tt<-43200.0) sol->time=timeadd(time, 86400.0);
+    else if (tt> 43200.0) sol->time=timeadd(time,-86400.0);
+    else sol->time=time;
+    pos2ecef(pos,sol->rr);
+
+    /* 0=invalid, 1=roughDUIZHUN, 2=preciseDUIZHUN, 3=gps single */
+    /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
+    /* 9=zero-speed calib, A=VG */
+    //没有对status >= A的情况进行处理
+    sol->stat=0<=solq&&solq<=9?solq_nmea_gpfpd[status]:SOLQ_NONE;
+    sol->ns=nsv1;
+
+    sol->type=0; /* postion type = xyz */
+
+    trace(5,"decode_nmeafpd: %s rr=%.3f %.3f %.3f stat=%d ns=%d\n",
+        time_str(sol->time,0),sol->rr[0],sol->rr[1],sol->rr[2],sol->stat,sol->ns);
+
+    return 1;
+}
+
+
 /* decode nmea ---------------------------------------------------------------*/
 static int decode_nmea(char *buff, sol_t *sol)
 {
@@ -250,6 +330,9 @@ static int decode_nmea(char *buff, sol_t *sol)
     }
     else if (!strcmp(val[0],"$GPGGA")) {
         return decode_nmeagga(val+1,n-1,sol);
+    }
+    else if(!strcmp(val[0],"$GPFPD")) {
+        return decode_nmeafpd(val+1,n-1,sol);   //crown added
     }
     return 0;
 }
