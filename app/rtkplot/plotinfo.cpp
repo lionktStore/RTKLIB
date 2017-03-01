@@ -80,6 +80,14 @@ void __fastcall TPlot::UpdateTimeSol(void)
 {
     const char *unit[]={"m","m/s","m/s2"},*u;
     const char *sol[]={"","FIX","FLOAT","SBAS","DGPS","Single","PPP"};
+    
+    //nmea fpd filed:
+    /* 0=invalid, 1=roughDUIZHUN, 2=preciseDUIZHUN, 3=gps single */
+    /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
+    /* 9=zero-speed calib, A=VG */
+    const char *sol_nmea_gpfpd={"","roughDUIZHUN","preciseDUIZHUN","gps single","gps heading","rtk",
+        "DMI combined","DMI calib","inertial","zero-speed calib"};
+    
     AnsiString msg,msgs[8],s;
     sol_t *data;
     double xyz[3],pos[3],r,az,el;
@@ -118,8 +126,11 @@ void __fastcall TPlot::UpdateTimeSol(void)
             msg+=s.sprintf("B=%.3fm D=%6.2f" CHARDEG " %5.2f" CHARDEG "  Q=",
                            r,az<0.0?az+360.0:az,el);
         }
-        if (1<=data->stat&&data->stat<=6) {
-            msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol[data->stat]);
+        // if (1<=data->stat&&data->stat<=6) {
+        //     msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol[data->stat]);
+        // }
+        if (1<=data->stat&&data->stat<=9) {
+            msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol_nmea_gpfpd[data->stat]);
         }
     }
     ShowMsg(msg);
