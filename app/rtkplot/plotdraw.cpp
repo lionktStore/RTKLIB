@@ -335,7 +335,20 @@ void __fastcall TPlot::DrawTrkPnt(const TIMEPOS *pos, int level, int style)
             for (i=0;i<pos->n;i++) color[i]=CColor[0];
             GraphT->DrawMarks(pos->x,pos->y,color,pos->n,0,MarkSize+2,0);
         }
-        for (i=0;i<pos->n;i++) color[i]=MColor[style][pos->q[i]];
+		//for (i=0;i<pos->n;i++) color[i]=MColor[style][pos->q[i]];
+		//crown added color selection for track plotting, 2017-3-3
+		for (i=0;i<pos->n;i++) {
+			int color_flag = pos->q[i];
+			switch(pos->q[i]){
+			case 2: color_flag = 1; break;     //precise DUIZHUN
+			case 3: color_flag = 2; break;     //gps single
+			case 5: color_flag = 3; break;     //rtk
+			case 6: color_flag = 4; break;     //DMI combination
+			case 8: color_flag = 5; break;     //inertial
+            default: color_flag = pos->q[i]; break;
+			}
+			color[i]=MColor[style][color_flag];
+		}
         GraphT->DrawMarks(pos->x,pos->y,color,pos->n,0,MarkSize,0);
         delete [] color;
     }

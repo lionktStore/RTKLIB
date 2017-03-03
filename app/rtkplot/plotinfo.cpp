@@ -64,7 +64,7 @@ void __fastcall TPlot::UpdateTimeObs(void)
             for (i=0;i<7;i++) msgs[i]=SimObs?msgs3[i]:msgs1[i];
         }
         else if (PlotType==PLOT_MPS) {
-            msg+=s.sprintf("NSAT=%d ",ns);
+			msg+=s.sprintf("NSAT=%d ",ns);
             for (i=0;i<7;i++) msgs[i]=msgs4[i];
         }
         else {
@@ -145,8 +145,8 @@ void __fastcall TPlot::UpdateTimeSol(void)
 		if (1<=data->stat&&data->stat<=9) {
 			msgs[FPD_FLAG-1]=s.sprintf("%d:%s",data->stat,sol_nmea_gpfpd[data->stat]);
 		}
-    }
-    ShowMsg(msg);
+	}
+	ShowMsg(msg);
     ShowLegend(msgs);
 }
 // update statistics-information for observation-data plot ------------------
