@@ -71,7 +71,7 @@ static const int solq_nmea_gpfpd[]={    /* nmea gpfpd quality flag to rtklib sol
     /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
     /* 9=zero-speed calib, A=VG */
     0,1,2,3,4,5,6,7,8,9,10
-}
+};
 
 
 
@@ -214,9 +214,10 @@ static int decode_nmeagga(char **val, int n, sol_t *sol)
         trace(2,"invalid nmea gpgga format\n");
         return 0;
     }
-    if (sol->time.time==0.0) {
-        trace(2,"no date info for nmea gpgga\n");
-        return 0;
+	if (sol->time.time==0.0) {
+		sol->time.time== tod;
+		trace(2,"no date info for nmea gpgga, but crown manually added it\n");
+		//return 0;
     }
     pos[0]=(ns=='N'?1.0:-1.0)*dmm2deg(lat)*D2R;
     pos[1]=(ew=='E'?1.0:-1.0)*dmm2deg(lon)*D2R;
@@ -261,27 +262,25 @@ static int decode_nmeafpd(char **val, int n, sol_t *sol)
             case 0:week =atoi(val[i]); break; /* GPS week in utc (wwww)*/
             case 1:tod  =atof(val[i]); break; /* time in utc (hhmmss) */
             case 2:heading = atof(val[i]); break;   /* heading (hhh.hh)*/
-            case 3:ptich = atof(val[i]); break;   /* pitch (pp.pp)*/
+            case 3:pitch = atof(val[i]); break;   /* pitch (pp.pp)*/
             case 4:roll = atof(val[i]); break;   /* roll (rrr.rr)*/
             case 5:lat =  atof(val[i]); break;   /* latitude (ll.lllllll) */
             case 6:lon =  atof(val[i]); break;   /* lontitude (ll.lllllll) */
-            case 7:alt =  atof(val[i]); break;   /* altitude (aaaaa.aa)*/
-            case 8:head_dc = atof(val[i]); break;   /* head dc (hh.hh) */
-            case 9:airpeed = atof(val[i]); break;   /* airpeed(aaa.aaa) */
-            case 10:ve = atof(val[i]); break;   /* east speed (eee.eee) */            
-            case 11:vn = atof(val[i]); break;   /* north speed (nnn.nnn) */            
-            case 12:vu = atof(val[i]); break;   /* up speed (uuu.uuu) */            
-            case 13:baseline = atof(val[i]); break;   /* baseline length (bb.bbb) */            
-            case 14:nsv1 = atoi(val[i]); break;   /* number of satellites detected on antenna 1 */            
-            case 15:nsv2 = atoi(val[i]); break;   /* number of satellites detected on antenna 2 */            
-            case 16:status = atoi(val[i][1]); break; /* system solution status, only extract the 2rd char*/
+			case 7:alt =  atof(val[i]); break;   /* altitude (aaaaa.aa)*/
+			case 8:ve = atof(val[i]); break;   /* east speed (eee.eee) */
+			case 9:vn = atof(val[i]); break;   /* north speed (nnn.nnn) */
+			case 10:vu = atof(val[i]); break;   /* up speed (uuu.uuu) */
+			case 11:baseline = atof(val[i]); break;   /* baseline length (bb.bbb) */
+			case 12:nsv1 = atoi(val[i]); break;   /* number of satellites detected on antenna 1 */
+			case 13:nsv2 = atoi(val[i]); break;   /* number of satellites detected on antenna 2 */
+            case 14:status = val[i][1]-48; break; /* system solution status, only extract the 2rd char*/
         }
 
     }
-    sol->time = tod;
+    sol->time.time = tod;
 
-    pos[0] = lat;   //lat is rad format ?
-    pos[1] = lon;   //lon is rad format ?
+	pos[0] = lat*D2R;   //lat is rad format ?
+    pos[1] = lon*D2R;   //lon is rad format ?
     pos[2] = alt;   //wgs84 format ?
 
     time2epoch(sol->time,ep);
@@ -297,8 +296,8 @@ static int decode_nmeafpd(char **val, int n, sol_t *sol)
     /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
     /* 9=zero-speed calib, A=VG */
     //没有对status >= A的情况进行处理
-    sol->stat=0<=solq&&solq<=9?solq_nmea_gpfpd[status]:SOLQ_NONE;
-    sol->ns=nsv1;
+    sol->stat=0<=status&&status<=9?solq_nmea_gpfpd[status]:SOLQ_NONE;
+    sol->ns=nsv1>nsv2?nsv1:nsv2;
 
     sol->type=0; /* postion type = xyz */
 

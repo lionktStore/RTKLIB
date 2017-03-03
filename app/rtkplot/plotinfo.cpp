@@ -85,7 +85,7 @@ void __fastcall TPlot::UpdateTimeSol(void)
     /* 0=invalid, 1=roughDUIZHUN, 2=preciseDUIZHUN, 3=gps single */
     /* 4=gps heading, 5=rtk, 6=DMI combined, 7=DMI calib, 8=inertial */
     /* 9=zero-speed calib, A=VG */
-    const char *sol_nmea_gpfpd={"","roughDUIZHUN","preciseDUIZHUN","gps single","gps heading","rtk",
+    const char *sol_nmea_gpfpd[]={"","roughDUIZHUN","preciseDUIZHUN","gps single","gps heading","rtk",
         "DMI combined","DMI calib","inertial","zero-speed calib"};
     
     AnsiString msg,msgs[8],s;
@@ -128,10 +128,23 @@ void __fastcall TPlot::UpdateTimeSol(void)
         }
         // if (1<=data->stat&&data->stat<=6) {
         //     msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol[data->stat]);
-        // }
-        if (1<=data->stat&&data->stat<=9) {
-            msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol_nmea_gpfpd[data->stat]);
-        }
+		// }
+		//crown added 2017-3-3, for display fpd
+		//if (1<=data->stat&&data->stat<=9) {
+		//	msgs[data->stat-1]=s.sprintf("%d:%s",data->stat,sol_nmea_gpfpd[data->stat]);
+		//}
+		int FPD_FLAG = 0;
+		switch(data->stat){
+		case 2: FPD_FLAG=1;break;   //precise DUIZHUN
+		case 3: FPD_FLAG=2;break;   //GPS single
+		case 5: FPD_FLAG=3;break;   //RTK
+		case 6: FPD_FLAG=4;break;   //DMI
+		case 8: FPD_FLAG=5;break;   //inertial
+		default: FPD_FLAG = data->stat;break;
+		}
+		if (1<=data->stat&&data->stat<=9) {
+			msgs[FPD_FLAG-1]=s.sprintf("%d:%s",data->stat,sol_nmea_gpfpd[data->stat]);
+		}
     }
     ShowMsg(msg);
     ShowLegend(msgs);

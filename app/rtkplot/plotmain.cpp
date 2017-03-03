@@ -217,7 +217,8 @@ void __fastcall TPlot::FormShow(TObject *Sender)
         else {
             OpenFiles->Add(argv[i]);
         }
-    }
+	}
+	Trace = 2;
     UpdateType(PlotType>=PLOT_OBS?PLOT_TRK:PlotType);
     
     UpdateColor();
